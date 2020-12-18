@@ -11,7 +11,9 @@ This file is for testing purpose.
 Unaxial stress fibers in the y-direction added. 
 '''
 
-parameters ["form_compiler"]["cpp_optimize"] = True
+parameters ["form_compiler"]["cpp_optimize"] = True #Adjusting global parameters
+parameters["mesh_partitioner"] = "SCOTCH"  # "ParMETIS"
+parameters["linear_algebra_backend"] = "PETSc"
 ffc_options = {"optimize": True, \
                "eliminate_zeros": True, \
                "precompute_basis_const": True, \
@@ -25,11 +27,17 @@ def setup():
     initiate finite element function spaces for scalar and vector variables.
     '''
     mesh = Mesh()
-    with XDMFFile('06092019_G1/process.xdmf') as infile:
+    with XDMFFile('process_tetra.xdmf') as infile:
         infile.read(mesh)
-    domains = MeshFunction('size_t', mesh, mesh.topology().dim())
-    with XDMFFile('06092019_G1/process.xdmf') as infile:
-        infile.read(domains)
+    #domains = MeshFunction('size_t', mesh, mesh.topology().dim())
+    mvc = MeshValueCollection("size_t", mesh, 2)
+    with XDMFFile('process_tetra.xdmf') as infile:
+        infile.read(mvc, "tetra")  # store physical
+    #    infile.read(domains)
+    domains = cpp.mesh.MeshFunctionSizet(mesh, mvc)
+    #mesh.xdmf.read()
+
+
     '''
     100: gel
     200: cytoplasm
@@ -40,7 +48,6 @@ def setup():
     V = VectorFunctionSpace(mesh, 'P', degree)
     V0 = FunctionSpace(mesh, 'P', degree)
     return mesh, domains, V0, V
-
 
 def solver(u, mesh, domains, V0, V, B, T, f):
     '''
@@ -70,16 +77,16 @@ def solver(u, mesh, domains, V0, V, B, T, f):
     Ic_bar = tr(C_bar)
     I4 = sqrt(C[1, 1])
 
-    # prescribe material properites for different regions
-    E_0 = 1.
+    # prescribe material properties for different regions
+    E_0 = 1.  #Young's modulus
     E_c = 10.
     E_n = 100.
     nu_0 = 0.49
     nu_c = 0.2
     nu_n = 0.4999
-    mu_0 = E_0 / 2 / (1 + nu_0)
-    mu_c = E_c / 2 / (1 + nu_c)
-    mu_n = E_n / 2 / (1 + nu_n)
+    mu_0 = E_0 / 2 / (1 + nu_0) #gel
+    mu_c = E_c / 2 / (1 + nu_c) #cytoplasm
+    mu_n = E_n / 2 / (1 + nu_n) #nucleus
     K_0 = E_0 / 3 / (1 - 2 * nu_0)
     K_c = E_c / 3 / (1 - 2 * nu_c)
     K_n = E_n / 3 / (1 - 2 * nu_n)
@@ -90,7 +97,7 @@ def solver(u, mesh, domains, V0, V, B, T, f):
 
     # assemble the total potential energy
     Pi = psi_0 * dx(100) + psi_c * dx(200) + psi_n * dx(300) - dot(B, u) * dx('everywhere') - dot(T, u) * ds
-
+        #computes the potential for the gel, cytoplasm and nucleus. Minimum potential principle
     # TODO: check this expression
     ef = as_vector([0, 0, 1])  # fiber orientation (undeformed)
     m = F * ef / sqrt(I4)  # fiber orientation (deformed)
@@ -98,7 +105,8 @@ def solver(u, mesh, domains, V0, V, B, T, f):
     Tsf = f * I4 / J * as_matrix([[m[0] * m[0], m[0] * m[1], m[0] * m[2]],
                                   [m[1] * m[0], m[1] * m[1], m[1] * m[2]],
                                   [m[2] * m[0], m[2] * m[1], m[2] * m[2]]
-                                  ])
+                                  ]) #f is how strong it contracts
+                                    #I4 is related to contraction in particular direction
     Psf = J * Tsf * inv(F.T)
 
     # take Gateaux derivative of Pi
@@ -106,8 +114,13 @@ def solver(u, mesh, domains, V0, V, B, T, f):
     # calculate Jacobian
     J = derivative(A, u, du)
 
+
     # Compute solution
     solve(A == 0, u, bc, J=J, form_compiler_parameters=ffc_options)
+    #solve(A == 0, u, bc, solver_parameters={"newton_solver":{"mumps"}})
+    #solve(A==0,u,solver_parameters={["nonlinear_solver"]["linear_solver"] :"mumps"})
+    #solve(A == 0, u, solver_parameters={'newton_solver': {'linear_solver': 'mumps'}})
+    #solve(A == 0, u, bc, solver_parameters={'linear_solver': 'mumps'})
     return u, B, m
 
 
