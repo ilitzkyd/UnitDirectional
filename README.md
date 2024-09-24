@@ -11,12 +11,16 @@ and nucleus.
 UnitDirectional/
 
 ├── 06092019_G1/   
-# Folder with pre-processed mesh data and results files.
-├── dolfin/              # Folder containing setup files for dependencies.
+
+├── dolfin/  
+
 │   └── python/
-│       └── setup.py     # Setup script for Python dependencies.
-├── UnitDir.py           # Main script to run the simulation.
-└── README.md            # This file.
+
+│       └── setup.py   
+
+├── UnitDir.py  
+
+└── README.md          
 
 
 
