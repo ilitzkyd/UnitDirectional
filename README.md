@@ -13,9 +13,7 @@ UnitDirectional/
 ├── 06092019_G1/   
 
 ├── dolfin/  
-
 │   └── python/
-
 │       └── setup.py   
 
 ├── UnitDir.py  
