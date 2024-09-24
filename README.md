@@ -9,7 +9,9 @@ and nucleus.
 ## Project Structure
 
 UnitDirectional/
-├── 06092019_G1/         # Folder with pre-processed mesh data and results files.
+
+├── 06092019_G1/   
+# Folder with pre-processed mesh data and results files.
 ├── dolfin/              # Folder containing setup files for dependencies.
 │   └── python/
 │       └── setup.py     # Setup script for Python dependencies.
